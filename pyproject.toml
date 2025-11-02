@@ -1,0 +1,13 @@
+[project]
+name = "nifty-network-analysis"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ipykernel>=7.1.0",
+    "networkx>=3.5",
+    "nsepy>=0.8",
+    "pandas>=2.3.3",
+    "plotly>=6.3.1",
+]
