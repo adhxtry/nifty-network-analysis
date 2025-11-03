@@ -8,3 +8,37 @@ wheels/
 
 # Virtual environments
 .venv
+venv/
+ENV/
+
+# Sphinx documentation
+docs/build/
+docs/_build/
+
+# Data files
+data/
+*.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
