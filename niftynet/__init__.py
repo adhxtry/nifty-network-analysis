@@ -13,6 +13,6 @@ try:
 except ImportError:
     __version__ = "0.1.0"  # Fallback for older Python versions
 
-from niftynet import data, graph, metrics, visuals
+from . import data, graph, metrics, visuals
 
-__all__ = ["data", "graph", "metrics", "visuals", "__version__"]
+__all__ = ["__version__", "data", "graph", "metrics", "visuals"]

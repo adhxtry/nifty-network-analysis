@@ -5,23 +5,112 @@ This module provides functions to fetch historical stock data using yfinance
 and store it in CSV format.
 """
 
+from .config import config
+
 from pathlib import Path
-from typing import List, Optional
+import requests
+from io import StringIO
 import pandas as pd
 import yfinance as yf
+import time
+
+
+def get_data_folder() -> Path:
+    """
+    Get the default data folder path.
+    The library store in user's home directory under '.niftynet/data'.
+
+    Returns:
+        Path object pointing to the data directory
+    """
+    data_folder = config.get("data_folder", Path.home() / ".niftynet" / "data")
+    data_folder.mkdir(parents=True, exist_ok=True)
+    return data_folder
+
+
+_TICKER_COLUMN = "Symbol"
+
+
+def fetch_nifty_index(
+    url: str = "https://www.niftyindices.com/IndexConstituent/ind_nifty500list.csv",
+    force_refresh: bool = False,
+    ticker_column: str = "Symbol"
+) -> pd.DataFrame:
+    """
+    Fetch the current list of Nifty 500 index constituents.
+
+    Args:
+        url: URL to fetch the Nifty 500 index list CSV
+        force_refresh: If True, re-fetch the data even if cached (default: False)
+
+    Returns:
+        DataFrame with Nifty 500 index constituents
+    """
+    force_refresh = force_refresh or not config.get("cache_nifty_index", True)
+
+    data_folder = get_data_folder()
+    index_file = data_folder / "ind_nifty500list.csv"
+
+    if index_file.exists() and not force_refresh:
+        df = pd.read_csv(index_file)
+    else:
+        response = requests.get(
+            url, timeout=10, allow_redirects=True,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+                "Accept": "text/csv,application/octet-stream",
+            }
+        )
+        df = pd.read_csv(StringIO(response.text))
+        # rename ticker_column column to _TICKER_COLUMN
+        df.rename(columns={ticker_column: _TICKER_COLUMN}, inplace=True)
+        df.to_csv(index_file, index=False)
+
+    return df
+
+
+def _fetch_stock_data_yfinance(
+    start_date: str,
+    end_date: str,
+) -> pd.DataFrame:
+    """Fetch the stock data using yfinance for all Nifty 500 tickers."""
+
+    data_folder = get_data_folder() / "stock_data_cache"
+
+    tickers = fetch_nifty_index()[_TICKER_COLUMN].dropna().unique().tolist()
+    tickers = [ticker + ".NS" for ticker in tickers]
+
+    data = yf.download(
+        tickers, start=start_date, end=end_date, progress=False,
+    )
+
+    if data.empty:
+        raise ValueError("No data fetched. Check ticker symbols and date range.")
+
+    # Handle multi-level columns for multiple tickers.
+    # save the cache to CSV before selecting column for each column name
+    for col in data.columns.levels[0]:
+        cache_file = data_folder / f"{start_date}-{end_date}-{col}.csv"
+        data[col].to_csv(cache_file)
+
+    # Remove any tickers with all NaN values
+    return data
 
 
 def fetch_stock_data(
-    tickers: List[str],
     start_date: str,
     end_date: str,
     column: str = "Close"
 ) -> pd.DataFrame:
     """
     Fetch historical stock data for multiple tickers.
+    Caches data in library's data folder.
 
     Args:
-        tickers: List of stock ticker symbols
         start_date: Start date in YYYY-MM-DD format
         end_date: End date in YYYY-MM-DD format
         column: Price column to extract (default: "Close")
@@ -32,91 +121,44 @@ def fetch_stock_data(
     Raises:
         ValueError: If no valid data is fetched
     """
-    data = yf.download(tickers, start=start_date, end=end_date, progress=False)
 
-    if data.empty:
-        raise ValueError("No data fetched. Check ticker symbols and date range.")
+    data_folder = get_data_folder() / "stock_data_cache"
 
-    # Handle multi-level columns for multiple tickers
-    if isinstance(data.columns, pd.MultiIndex):
-        prices = data[column]
-    else:
-        prices = data[[column]]
+    if not data_folder.exists():
+        data_folder.mkdir(exist_ok=True)
 
-    # Remove any tickers with all NaN values
-    prices = prices.dropna(axis=1, how='all')
+    filename = f"{start_date}-{end_date}-{column}.csv"
 
-    return prices
+    cache_file = data_folder / filename
+
+    if cache_file.exists() and config.get("cache_stock_data", True):
+        prices = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+        return prices
+
+    data = _fetch_stock_data_yfinance(start_date, end_date)
+    if column not in data.columns.levels[0]:
+        raise ValueError(f"Column '{column}' not found in yfinance fetched data.")
+
+    return data[column]
 
 
-def save_to_csv(
-    data: pd.DataFrame,
-    output_dir: str = "data",
-    filename: str = "stock_data.csv"
-) -> Path:
+def prune_stock_cache(cutoff_days: int = 30):
     """
-    Save DataFrame to CSV file in specified directory.
-
-    Args:
-        data: DataFrame to save
-        output_dir: Directory to save the file (default: "data")
-        filename: Name of the output file (default: "stock_data.csv")
-
-    Returns:
-        Path object pointing to the saved file
-
-    Raises:
-        IOError: If unable to write file
+    Prune cached stock data files older than `cutoff_days`.
     """
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
 
-    file_path = output_path / filename
-    data.to_csv(file_path)
+    data_folder = get_data_folder() / "stock_data_cache"
+    if not data_folder.exists():
+        return
 
-    return file_path
+    now = time.time()
+    cutoff = now - (cutoff_days * 86400)  # 30 days in seconds
 
-
-def load_from_csv(file_path: str) -> pd.DataFrame:
-    """
-    Load stock data from CSV file.
-
-    Args:
-        file_path: Path to the CSV file
-
-    Returns:
-        DataFrame with loaded data
-
-    Raises:
-        FileNotFoundError: If file doesn't exist
-        pd.errors.ParserError: If CSV is malformed
-    """
-    return pd.read_csv(file_path, index_col=0, parse_dates=True)
+    for file in data_folder.iterdir():
+        if file.is_file():
+            file_mtime = file.stat().st_mtime
+            if file_mtime < cutoff:
+                file.unlink()
 
 
-def fetch_and_save(
-    tickers: List[str],
-    start_date: str,
-    end_date: str,
-    output_dir: str = "data",
-    filename: Optional[str] = None
-) -> Path:
-    """
-    Fetch stock data and save it to CSV in one operation.
-
-    Args:
-        tickers: List of stock ticker symbols
-        start_date: Start date in YYYY-MM-DD format
-        end_date: End date in YYYY-MM-DD format
-        output_dir: Directory to save the file (default: "data")
-        filename: Name of the output file (default: auto-generated)
-
-    Returns:
-        Path object pointing to the saved file
-    """
-    data = fetch_stock_data(tickers, start_date, end_date)
-
-    if filename is None:
-        filename = f"stock_data_{start_date}_to_{end_date}.csv"
-
-    return save_to_csv(data, output_dir, filename)
+prune_stock_cache(config.get("stock_cache_cutoff_days", 30))
