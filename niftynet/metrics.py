@@ -8,6 +8,41 @@ other graph metrics for network analysis.
 from typing import Dict
 import networkx as nx
 import pandas as pd
+import numpy as np
+
+
+def log_linear_fitting(degrees: np.ndarray, counts: np.ndarray) -> tuple[callable, float]:
+    """
+    Fit a log-linear model to the degree distribution.
+
+    Args:
+        degrees: Array of degree values
+        counts: Array of corresponding counts for each degree
+
+    Returns:
+        (model, r_squared): where model is a polynomial function and r_squared is the R² value
+    """
+    # Filter out degrees <= 1 to avoid log(0) and log(1) issues
+    mask = degrees > 1
+    degrees_filtered = degrees[mask]
+    counts_filtered = counts[mask]
+
+    if len(degrees_filtered) < 2:
+        # Return a dummy polynomial and NaN error if not enough points
+        return np.poly1d([0, 0]), np.nan
+
+    log_degrees = np.log(degrees_filtered)
+    log_counts = np.log(counts_filtered)
+    coeffs = np.polyfit(log_degrees, log_counts, 1)
+    model = np.poly1d(coeffs)
+
+    # Calculate R² (coefficient of determination)
+    y_pred = model(log_degrees)
+    ss_res = np.sum((log_counts - y_pred) ** 2)  # Residual sum of squares
+    ss_tot = np.sum((log_counts - np.mean(log_counts)) ** 2)  # Total sum of squares
+    r_squared = 1 - (ss_res / ss_tot)
+
+    return model, r_squared
 
 
 def compute_degree_centrality(graph: nx.Graph) -> Dict[str, float]:

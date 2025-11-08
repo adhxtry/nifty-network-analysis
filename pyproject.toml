@@ -8,14 +8,13 @@ dependencies = [
     "dash>=2.18.0",
     "dash-bootstrap-components>=1.6.0",
     "ipykernel>=7.1.0",
+    "nbformat>=5.10.4",
     "networkx>=3.5",
     "numpy>=1.26.0",
     "pandas>=2.3.3",
     "plotly>=6.3.1",
     "requests>=2.31.0",
     "scipy>=1.11.0",
-    "sphinx>=8.2.3",
-    "sphinx-rtd-theme>=2.0.0",
     "yfinance>=0.2.66",
 ]
 
@@ -23,6 +22,8 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",
+    "sphinx>=8.2.3",
+    "sphinx-rtd-theme>=2.0.0",
 ]
 
 [build-system]

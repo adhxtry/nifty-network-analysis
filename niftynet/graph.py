@@ -11,34 +11,46 @@ import numpy as np
 import pandas as pd
 
 
-def compute_correlation_matrix(
+def return_correlation_matrix(
     price_data: pd.DataFrame,
-    method: str = "pearson"
+    method: str = "pearson",
+    absolute: bool = True
 ) -> pd.DataFrame:
     """
     Compute correlation matrix from price data.
+    First, computes the daily returns, then calculates the correlation matrix.
+
+    The daily returns are calculated as `r_i(t) = log(P_i(t) / P_i(t-1))`
+    where `P_i(t)` is the price of stock `i` at time `t`.
 
     Args:
         price_data: DataFrame with stock prices (tickers as columns)
         method: Correlation method - 'pearson', 'kendall', or 'spearman'
+        absolute: Use absolute correlation values (default: True)
 
     Returns:
         Correlation matrix as DataFrame
 
     Raises:
-        ValueError: If invalid correlation method specified
+        ValueError: If method is not recognized
     """
     valid_methods = ["pearson", "kendall", "spearman"]
     if method not in valid_methods:
         raise ValueError(f"Method must be one of {valid_methods}")
 
-    return price_data.corr(method=method)
+    # Log of returns
+    log_returns = np.log(price_data / price_data.shift(1)).dropna(axis=0)
+
+    corr = log_returns.corr(method=method)
+
+    if absolute:
+        return corr.abs()
+    return corr
 
 
 def build_correlation_graph(
     correlation_matrix: pd.DataFrame,
-    threshold: float = 0.5,
-    absolute: bool = True
+    threshold: float = 0.5
 ) -> nx.Graph:
     """
     Build a NetworkX graph from correlation matrix.
@@ -59,71 +71,18 @@ def build_correlation_graph(
 
     G = nx.Graph()
 
-    # Add all nodes
-    tickers = correlation_matrix.columns.tolist()
-    G.add_nodes_from(tickers)
+    G.add_nodes_from(correlation_matrix.index)
 
-    # Add edges based on correlation threshold
-    for i, ticker1 in enumerate(tickers):
-        for j, ticker2 in enumerate(tickers):
-            if i < j:  # Avoid duplicate edges and self-loops
-                corr_value = correlation_matrix.iloc[i, j]
+    # Add edges based on the threshold
+    rows, cols = np.where(correlation_matrix.values >= threshold)
+    mask = rows != cols  # Exclude self-loops
+    rows, cols = rows[mask], cols[mask]
+    rows, cols = correlation_matrix.index[rows], correlation_matrix.columns[cols]
+    edges = zip(rows, cols)
 
-                # Use absolute value if specified
-                corr_to_compare = abs(corr_value) if absolute else corr_value
-
-                if corr_to_compare >= threshold:
-                    G.add_edge(ticker1, ticker2, weight=corr_value)
+    G.add_edges_from(edges)
 
     return G
-
-
-def build_graph_from_prices(
-    price_data: pd.DataFrame,
-    threshold: float = 0.5,
-    method: str = "pearson",
-    absolute: bool = True
-) -> Tuple[nx.Graph, pd.DataFrame]:
-    """
-    Build correlation graph directly from price data.
-
-    Args:
-        price_data: DataFrame with stock prices (tickers as columns)
-        threshold: Minimum correlation value for edge creation (default: 0.5)
-        method: Correlation method - 'pearson', 'kendall', or 'spearman'
-        absolute: Use absolute correlation values (default: True)
-
-    Returns:
-        Tuple of (NetworkX Graph, correlation matrix)
-    """
-    corr_matrix = compute_correlation_matrix(price_data, method)
-    graph = build_correlation_graph(corr_matrix, threshold, absolute)
-
-    return graph, corr_matrix
-
-
-def filter_graph(
-    graph: nx.Graph,
-    min_degree: int = 1
-) -> nx.Graph:
-    """
-    Filter graph by removing isolated nodes or low-degree nodes.
-
-    Args:
-        graph: NetworkX graph to filter
-        min_degree: Minimum degree for nodes to keep (default: 1)
-
-    Returns:
-        Filtered NetworkX graph
-    """
-    G_filtered = graph.copy()
-
-    # Remove nodes with degree less than threshold
-    nodes_to_remove = [node for node, degree in dict(G_filtered.degree()).items()
-                       if degree < min_degree]
-    G_filtered.remove_nodes_from(nodes_to_remove)
-
-    return G_filtered
 
 
 def get_graph_summary(graph: nx.Graph) -> dict:
@@ -153,3 +112,18 @@ def get_graph_summary(graph: nx.Graph) -> dict:
             summary["num_components"] = nx.number_connected_components(graph)
 
     return summary
+
+
+def degree_distribution(graph) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Calculate the degree distribution of a graph.
+
+    Args:
+        graph: NetworkX graph
+
+    Returns:
+        (degrees, counts): unique degree values and their corresponding frequencies
+    """
+    degrees = [degree for node, degree in graph.degree()]
+    degree_counts = pd.Series(degrees).value_counts().sort_index()
+    return degree_counts.index.values, degree_counts.values

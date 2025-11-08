@@ -236,3 +236,34 @@ def create_degree_distribution(
     )
 
     return fig
+
+
+def plot_degree_distribution(
+    degrees: np.ndarray, counts: np.ndarray,
+    model: callable,
+    fig_grid: go.Figure, row: int, col: int
+) -> go.Figure:
+    """
+    Plot the degree distribution on a log-log scale.
+    Also plots the fitted power-law line, with error bands.
+
+    Adds the plot to the provided `fig_grid` figure.
+    """
+    # Add data points to the subplot
+    fig_grid.add_trace(
+        go.Scatter(x=degrees, y=counts, mode='markers', name='Data', showlegend=False),
+        row=row,
+        col=col
+    )
+
+    # Plot the log-linear model to the data
+    x_fit = np.linspace(degrees[degrees > 0].min(), degrees.max(), 3, endpoint=True)
+    y_fit = np.exp(model(np.log(x_fit)))
+
+    # Add fitted line to the subplot
+    fig_grid.add_trace(
+        go.Scatter(x=x_fit, y=y_fit, mode='lines', name='Fitted Power Law', showlegend=False),
+        row=row,
+        col=col
+    )
+    return fig_grid

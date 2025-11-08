@@ -31,25 +31,25 @@ def get_data_folder() -> Path:
 _TICKER_COLUMN = "Symbol"
 
 
-def fetch_nifty_index(
+def fetch_index(
     url: str = "https://www.niftyindices.com/IndexConstituent/ind_nifty500list.csv",
     force_refresh: bool = False,
     ticker_column: str = "Symbol"
 ) -> pd.DataFrame:
     """
-    Fetch the current list of Nifty 500 index constituents.
+    Fetch the current list of companies index constituents.
 
     Args:
-        url: URL to fetch the Nifty 500 index list CSV
+        url: URL to fetch the companies index list CSV
         force_refresh: If True, re-fetch the data even if cached (default: False)
 
     Returns:
-        DataFrame with Nifty 500 index constituents
+        DataFrame with companies index constituents
     """
     force_refresh = force_refresh or not config.get("cache_nifty_index", True)
 
     data_folder = get_data_folder()
-    index_file = data_folder / "ind_nifty500list.csv"
+    index_file = data_folder / "index.csv"
 
     if index_file.exists() and not force_refresh:
         df = pd.read_csv(index_file)
@@ -81,7 +81,7 @@ def _fetch_stock_data_yfinance(
 
     data_folder = get_data_folder() / "stock_data_cache"
 
-    tickers = fetch_nifty_index()[_TICKER_COLUMN].dropna().unique().tolist()
+    tickers = fetch_index()[_TICKER_COLUMN].dropna().unique().tolist()
     tickers = [ticker + ".NS" for ticker in tickers]
 
     data = yf.download(
@@ -142,12 +142,20 @@ def fetch_stock_data(
     return data[column]
 
 
-def prune_stock_cache(cutoff_days: int = 30):
+def purge_stock_cache(cutoff_days: int = 30):
     """
     Prune cached stock data files older than `cutoff_days`.
     """
 
-    data_folder = get_data_folder() / "stock_data_cache"
+    data_folder: Path = get_data_folder()
+
+    # remove files in index first
+    for file in data_folder.iterdir():
+        if file.is_file() and file.name.endswith(".csv"):
+            file.unlink()
+
+    # remove stock data cache
+    data_folder = data_folder / "stock_data_cache"
     if not data_folder.exists():
         return
 
@@ -161,4 +169,4 @@ def prune_stock_cache(cutoff_days: int = 30):
                 file.unlink()
 
 
-prune_stock_cache(config.get("stock_cache_cutoff_days", 30))
+purge_stock_cache(config.get("stock_cache_cutoff_days", 30))

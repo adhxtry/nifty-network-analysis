@@ -17,7 +17,7 @@ def test_compute_correlation_matrix():
         'C': [5, 4, 3, 2, 1]     # Perfect negative correlation with A
     })
 
-    corr_matrix = graph.compute_correlation_matrix(df, method='pearson')
+    corr_matrix = graph.return_correlation_matrix(df, method='pearson')
 
     assert corr_matrix.shape == (3, 3)
     assert corr_matrix.loc['A', 'B'] > 0.99  # Almost perfect positive
