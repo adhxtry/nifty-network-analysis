@@ -5,7 +5,8 @@ This module provides functions to generate interactive visualizations
 using Plotly for network graphs and other data.
 """
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
+import numpy as np
 import networkx as nx
 import plotly.graph_objects as go
 import pandas as pd
@@ -89,9 +90,7 @@ def create_network_plot(
 
     node_trace = go.Scatter(
         x=node_x, y=node_y,
-        mode='markers+text',
-        text=[str(node) for node in graph.nodes()],
-        textposition="top center",
+        mode='markers',
         hoverinfo='text',
         hovertext=node_text,
         marker=dict(
