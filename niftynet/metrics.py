@@ -5,7 +5,6 @@ This module provides functions to compute various centrality measures and
 other graph metrics for network analysis.
 """
 
-from typing import Dict
 import networkx as nx
 import pandas as pd
 import numpy as np
@@ -45,7 +44,43 @@ def log_linear_fitting(degrees: np.ndarray, counts: np.ndarray) -> tuple[callabl
     return model, r_squared
 
 
-def compute_degree_centrality(graph: nx.Graph) -> Dict[str, float]:
+def get_top_correlated_nodes(
+    correlation_matrix: pd.DataFrame,
+    node: str | None = None,
+    top_n: int = 10,
+    least: bool = False
+) -> pd.Series:
+    """
+    List top N most or least correlated nodes.
+
+    Args:
+        correlation_matrix: DataFrame representing the correlation matrix
+        node: Specific node to analyze (default: None, analyzes all nodes)
+        top_n: Number of top nodes to return (default: 10)
+        least: Whether to return least correlated instead of most (default: False)
+
+    Returns:
+        Series with nodes and their correlation values, sorted accordingly
+    """
+    if node:
+        correlations = correlation_matrix[node].drop(index=node)
+    else:
+        # If no specific node, analyze all nodes
+        corr_mat_copy = correlation_matrix.copy()
+        np.fill_diagonal(corr_mat_copy.values, np.nan)
+        # Since the matrix is symmetric, we can extract upper triangle
+        upper_tri = corr_mat_copy.where(np.triu(np.ones(corr_mat_copy.shape), k=1).astype(bool))
+        correlations = upper_tri.stack()
+
+    if least:
+        top_correlations = correlations.nsmallest(top_n)
+    else:
+        top_correlations = correlations.nlargest(top_n)
+
+    return top_correlations
+
+
+def compute_degree_centrality(graph: nx.Graph) -> dict[str, float]:
     """
     Compute degree centrality for all nodes.
 
@@ -61,7 +96,7 @@ def compute_degree_centrality(graph: nx.Graph) -> Dict[str, float]:
 def compute_betweenness_centrality(
     graph: nx.Graph,
     normalized: bool = True
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Compute betweenness centrality for all nodes.
 
@@ -77,7 +112,7 @@ def compute_betweenness_centrality(
 
 def compute_closeness_centrality(
     graph: nx.Graph
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Compute closeness centrality for all nodes.
 
@@ -101,7 +136,7 @@ def compute_closeness_centrality(
 def compute_eigenvector_centrality(
     graph: nx.Graph,
     max_iter: int = 100
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Compute eigenvector centrality for all nodes.
 
@@ -125,7 +160,7 @@ def compute_eigenvector_centrality(
 def compute_pagerank(
     graph: nx.Graph,
     alpha: float = 0.85
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     Compute PageRank for all nodes.
 
@@ -167,12 +202,14 @@ def compute_all_centralities(
     # Convert to DataFrame
     df = pd.DataFrame(metrics)
     df.index.name = "node"
+    # Closeness centrality may have NaN for small component nodes; fill with minimum closeness value
+    df.fillna({ "closeness": df["closeness"].min() }, inplace=True)
 
     return df
 
 
 def get_top_nodes(
-    centrality_dict: Dict[str, float],
+    centrality_dict: dict[str, float] | pd.Series,
     top_n: int = 10
 ) -> pd.Series:
     """
@@ -185,11 +222,12 @@ def get_top_nodes(
     Returns:
         Series with top N nodes and their values, sorted descending
     """
-    series = pd.Series(centrality_dict)
+    if isinstance(centrality_dict, dict):
+        series = pd.Series(centrality_dict)
     return series.nlargest(top_n)
 
 
-def compute_clustering_coefficient(graph: nx.Graph) -> Dict[str, float]:
+def compute_clustering_coefficient(graph: nx.Graph) -> dict[str, float]:
     """
     Compute clustering coefficient for all nodes.
 
@@ -205,7 +243,7 @@ def compute_clustering_coefficient(graph: nx.Graph) -> Dict[str, float]:
 def compute_community_structure(
     graph: nx.Graph,
     algorithm: str = "louvain"
-) -> Dict[str, int]:
+) -> dict[str, int]:
     """
     Detect community structure in the graph.
 

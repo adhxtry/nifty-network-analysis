@@ -5,7 +5,6 @@ This module provides functions to create NetworkX graphs from stock price data
 based on correlation relationships.
 """
 
-from typing import Optional, Tuple
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -50,7 +49,8 @@ def return_correlation_matrix(
 
 def build_correlation_graph(
     correlation_matrix: pd.DataFrame,
-    threshold: float = 0.5
+    threshold: float = 0.5,
+    no_self_loops: bool = True
 ) -> nx.Graph:
     """
     Build a NetworkX graph from correlation matrix.
@@ -58,7 +58,7 @@ def build_correlation_graph(
     Args:
         correlation_matrix: Correlation matrix as DataFrame
         threshold: Minimum correlation value for edge creation (default: 0.5)
-        absolute: Use absolute correlation values (default: True)
+        no_self_loops: If True, exclude self-loops (default: True)
 
     Returns:
         NetworkX Graph with nodes as tickers and edges weighted by correlation
@@ -71,12 +71,13 @@ def build_correlation_graph(
 
     G = nx.Graph()
 
-    G.add_nodes_from(correlation_matrix.index)
+    # G.add_nodes_from(correlation_matrix.index)
 
     # Add edges based on the threshold
     rows, cols = np.where(correlation_matrix.values >= threshold)
-    mask = rows != cols  # Exclude self-loops
-    rows, cols = rows[mask], cols[mask]
+    if no_self_loops:
+        mask = rows != cols  # Exclude self-loops
+        rows, cols = rows[mask], cols[mask]
     rows, cols = correlation_matrix.index[rows], correlation_matrix.columns[cols]
     edges = zip(rows, cols)
 
@@ -105,7 +106,7 @@ def get_graph_summary(graph: nx.Graph) -> dict:
     if graph.number_of_nodes() > 0:
         summary["avg_degree"] = sum(dict(graph.degree()).values()) / graph.number_of_nodes()
 
-        if nx.is_connected(graph):
+        if summary[graph]:
             summary["diameter"] = nx.diameter(graph)
             summary["avg_shortest_path"] = nx.average_shortest_path_length(graph)
         else:
