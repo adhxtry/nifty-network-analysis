@@ -220,8 +220,6 @@ This project is open source and available under the MIT License.
 
 ## References
 
-Reference papers on stock market network analysis are available in the `papers/` directory.
-
 [1] Chi, K. Tse, Jing Liu, and Francis CM Lau. "A network perspective of the stock market." Journal of
 Empirical Finance 17.4 (2010): 659-667.
 
