@@ -227,5 +227,3 @@ Empirical Finance 17.4 (2010): 659-667.
 
 [2] Moghadam, Hadi Esmaeilpour, et al. "Complex networks analysis in Iran stock market: The
 application of centrality." Physica A: Statistical Mechanics and its Applications 531 (2019): 121800.
-
-They are also included in the [papers](papers/) folder.
