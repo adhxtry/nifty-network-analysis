@@ -16,6 +16,7 @@ import networkx as nx
 import json
 import base64
 from datetime import datetime
+import zipfile
 
 import niftynet as nn
 from config import *
@@ -127,18 +128,16 @@ def create_threshold_analysis_section():
             dbc.Row([
                 dbc.Col(html.H3("2️⃣ Power Law Analysis (Multiple Thresholds)", className="mb-3"), width=6),
                 dbc.Col([
-                    dbc.ButtonGroup([
-                        dbc.Button(
-                            "📊 Download Plot (PNG)",
-                            id="download-threshold-btn",
-                            color="info",
-                            size="sm",
-                            disabled=True,
-                            n_clicks=0
-                        ),
-                    ], className="float-end"),
+                    dbc.Button(
+                        "📊 Download All (ZIP)",
+                        id="download-threshold-btn",
+                        color="info",
+                        size="sm",
+                        disabled=True,
+                        n_clicks=0
+                    ),
                     dcc.Download(id="download-threshold"),
-                    html.Small("Click once for plot, twice for stats", className="text-muted d-block text-end mt-1")
+                    html.Small("Downloads plot + stats as ZIP", className="text-muted d-block text-end mt-1")
                 ], width=6)
             ]),
             dbc.Card([
@@ -162,7 +161,7 @@ def create_detailed_analysis_section():
                 dbc.Col(html.H3("3️⃣ Detailed Network Analysis", className="mb-3"), width=6),
                 dbc.Col([
                     dbc.Button(
-                        "📥 Download",
+                        "📥 Download All (ZIP)",
                         id="download-analysis-btn",
                         color="info",
                         size="sm",
@@ -171,7 +170,7 @@ def create_detailed_analysis_section():
                         n_clicks=0
                     ),
                     dcc.Download(id="download-analysis"),
-                    html.Small("Click multiple times for all plots & report", className="text-muted d-block text-end mt-1")
+                    html.Small("Downloads plots + report as ZIP", className="text-muted d-block text-end mt-1")
                 ], width=6)
             ]),
             dbc.Card([
@@ -664,21 +663,21 @@ def perform_detailed_analysis(n_clicks, corr_matrix_json, threshold):
     prevent_initial_call=True
 )
 def download_threshold_analysis(n_clicks, plot_json, stats_json):
-    """Download threshold analysis results."""
+    """Download threshold analysis results as ZIP."""
     if plot_json is None or stats_json is None:
         return None
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # Save plot as image or stats as text
-    if n_clicks % 2 == 1:
-        # Download plot as PNG
+    # Create ZIP file in memory
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Add plot as PNG
         fig = go.Figure(json.loads(plot_json))
         img_bytes = fig.to_image(format="png", width=1920, height=1080)
-        img_b64 = base64.b64encode(img_bytes).decode()
-        return dict(content=img_b64, filename=f"threshold_analysis_{timestamp}.png", base64=True)
-    else:
-        # Download stats as text
+        zip_file.writestr(f"threshold_analysis_{timestamp}.png", img_bytes)
+
+        # Add stats as text
         stats_df = pd.read_json(StringIO(stats_json), orient='records')
         stats_text = f"""Nifty Network Analysis - Threshold Analysis
 Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
@@ -691,7 +690,13 @@ NETWORK STATISTICS BY THRESHOLD
 
 {'=' * 80}
 """
-        return dict(content=stats_text, filename=f"threshold_stats_{timestamp}.txt")
+        zip_file.writestr(f"threshold_stats_{timestamp}.txt", stats_text)
+
+    # Encode ZIP for download
+    zip_buffer.seek(0)
+    zip_b64 = base64.b64encode(zip_buffer.read()).decode()
+
+    return dict(content=zip_b64, filename=f"threshold_analysis_{timestamp}.zip", base64=True)
 
 
 @app.callback(
@@ -702,7 +707,7 @@ NETWORK STATISTICS BY THRESHOLD
     prevent_initial_call=True
 )
 def download_detailed_analysis(n_clicks, plots_json, data_json):
-    """Download detailed analysis results."""
+    """Download detailed analysis results as ZIP with all plots and report."""
     if plots_json is None or data_json is None:
         return None
 
@@ -710,24 +715,17 @@ def download_detailed_analysis(n_clicks, plots_json, data_json):
     plots_data = json.loads(plots_json)
     analysis_data = json.loads(data_json)
 
-    # Determine what to download based on click count
-    # Click 1-5: Individual centrality plots
-    # Click 6: Analysis text report
-    download_index = ((n_clicks - 1) % 6)
-
-    if download_index < 5:
-        # Download individual plot
+    # Create ZIP file in memory
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Add all centrality plots
         plot_names = ['degree', 'betweenness', 'closeness', 'eigenvector', 'pagerank']
-        plot_name = plot_names[download_index]
+        for plot_name in plot_names:
+            fig = go.Figure(json.loads(json.dumps(plots_data[plot_name])))
+            img_bytes = fig.to_image(format="png", width=1920, height=1080)
+            zip_file.writestr(f"{plot_name}_centrality_{timestamp}.png", img_bytes)
 
-        fig = go.Figure(json.loads(json.dumps(plots_data[plot_name])))
-        img_bytes = fig.to_image(format="png", width=1920, height=1080)
-        img_b64 = base64.b64encode(img_bytes).decode()
-
-        return dict(content=img_b64, filename=f"{plot_name}_centrality_{timestamp}.png", base64=True)
-
-    else:
-        # Download text report
+        # Generate and add text report
         threshold = analysis_data['threshold']
         stats = analysis_data['network_stats']
         clustering = analysis_data['clustering']
@@ -802,8 +800,13 @@ CORRELATION ANALYSIS
 
 END OF REPORT
 """
+        zip_file.writestr(f"network_analysis_{timestamp}.txt", report)
 
-        return dict(content=report, filename=f"network_analysis_{timestamp}.txt")
+    # Encode ZIP for download
+    zip_buffer.seek(0)
+    zip_b64 = base64.b64encode(zip_buffer.read()).decode()
+
+    return dict(content=zip_b64, filename=f"network_analysis_{timestamp}.zip", base64=True)
 
 
 # ============================================================================

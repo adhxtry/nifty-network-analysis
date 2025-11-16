@@ -2,14 +2,25 @@
 
 A comprehensive Python project for analyzing and visualizing network relationships between Nifty companies using stock market data.
 
+## Demo
+
+Here is a live demo of the web app:
+
+![Live Demo Video](docs/demo.gif)
+
+For the more detailed usage, refer to the [Prototype Notebook](./prototype.ipynb) which shows step-by-step analysis and usage of the library.
+
 ## Features
 
-- 📊 **Stock Data Fetching**: Fetch historical stock data using yfinance
-- 🕸️ **Network Analysis**: Build correlation-based graphs using NetworkX
-- 📈 **Centrality Metrics**: Compute degree, betweenness, closeness, and eigenvector centrality
-- 🎨 **Interactive Visualizations**: Create beautiful plots with Plotly
-- 🌐 **Web Application**: User-friendly Dash web interface
-- 📚 **Documentation**: Complete API documentation with Sphinx
+- **Stock Data Fetching**: Fetch historical stock data using yfinance with built-in caching
+- **Network Analysis**: Build correlation-based graphs using NetworkX
+- **Power Law Analysis**: Test for scale-free network characteristics across multiple thresholds
+- **Centrality Metrics**: Compute degree, betweenness, closeness, eigenvector centrality, and PageRank
+- **Community Detection**: Identify clusters of correlated stocks
+- **Interactive Visualizations**: Create beautiful plots with Plotly
+- **Web Application**: Full-featured Dash web interface for network analysis
+- **Download Results**: Export all plots (PNG) and analysis reports (TXT) as ZIP files
+- **Documentation**: Complete API documentation with Sphinx
 
 ## Project Structure
 
@@ -22,9 +33,11 @@ nifty-network-analysis/
 │   └── visuals.py        # Visualization functions
 ├── webapp/                # Dash web application
 │   ├── app.py            # Main application
-│   └── components/       # Reusable UI components
+│   ├── config.py         # Configuration settings
+│   ├── requirements.txt  # Web app dependencies
+│   └── README.md         # Web app documentation
 ├── tests/                 # Unit tests
-├── docs/                  # Sphinx documentation
+├── docs/                  # Sphinx documentation (TODO)
 └── pyproject.toml        # Project configuration
 ```
 
@@ -72,7 +85,66 @@ pip install -e .
 uv sync --extra dev
 ```
 
+### Install Notebook Dependencies
+
+To run [prototype notebook](./prototype.ipynb), install additional dependencies:
+
+```bash
+uv sync --extra notebook
+```
+
 ## Quick Start
+
+### Using the Web Application
+
+The web application provides a complete interface for network analysis with interactive visualizations and downloadable results.
+
+#### Using uv (Recommended)
+
+```bash
+# Run the web app
+uv run webapp/app.py
+```
+
+#### Using pip
+
+```bash
+# Activate virtual environment
+# On Windows:
+.venv\Scripts\activate
+# On macOS/Linux:
+source .venv/bin/activate
+
+# Run the web app
+python webapp/app.py
+```
+
+Then open your browser to: http://localhost:8050
+
+#### Using the Web App
+
+**Step 1: Data Configuration**
+- Enter the NSE index CSV URL (default: Nifty Total Market)
+- Select date range for historical data (e.g., 2024-01-01 to 2025-10-01)
+- Set threshold range for power law analysis (e.g., 0.2 to 0.7)
+- Check "Force Fetch" to bypass cache and get fresh data
+- Click **"Fetch Data & Generate Threshold Analysis"**
+
+**Step 2: Power Law Analysis**
+- View degree distribution plots on log-log scale for multiple thresholds
+- Review network statistics table (nodes, edges, average degree, R² values)
+- Download results as ZIP (plot PNG + stats TXT)
+
+**Step 3: Detailed Network Analysis**
+- Select a specific correlation threshold
+- Click **"Analyze"** to generate comprehensive analysis
+- View:
+  - Network statistics overview
+  - Most/least correlated stock pairs
+  - 5 centrality measures with interactive visualizations
+  - Community structure (clusters of correlated stocks)
+  - Clustering coefficients
+- Download all results as ZIP (5 centrality plots PNG + complete report TXT)
 
 ### Using the Python Library
 
@@ -98,151 +170,24 @@ fig = visuals.create_network_plot(G, title='Nifty Stock Network')
 fig.show()
 ```
 
-### Running the Web Application
+### Python Library API
 
-```bash
-# Start the Dash web app
-python webapp/app.py
+The `niftynet` library provides the core functionality used by the web application.
+
+## Data Sources
+
+The web application supports fetching stock data from NSE (National Stock Exchange of India):
+
+**Default Index URL:**
+```
+https://nsearchives.nseindia.com/content/indices/ind_niftytotalmarket_list.csv
 ```
 
-Then open your browser to: http://127.0.0.1:8050
+**Alternative Index URLs:**
+- Nifty 500: `https://www.niftyindices.com/IndexConstituent/ind_nifty500list.csv`
+- Nifty 50: `https://www.niftyindices.com/IndexConstituent/ind_nifty50list.csv`
 
-#### Using the Web App
-
-1. **Enter CSV URL**: Provide a URL to a CSV file containing Nifty500 tickers
-   - Default: https://www.niftyindices.com/IndexConstituent/ind_nifty500list.csv
-
-2. **Select Date Range**: Choose start and end dates for historical data
-
-3. **Set Correlation Threshold**: Adjust the minimum correlation for network edges
-
-4. **Click "Analyze Network"**: View the interactive network visualization
-
-## Running Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=niftynet --cov-report=html
-```
-
-## Documentation
-
-### Building Documentation Locally
-
-```bash
-cd docs
-make html
-```
-
-The documentation will be available at `docs/build/html/index.html`
-
-### Viewing Documentation Online
-
-Documentation is automatically built and deployed to GitHub Pages on every push to master:
-
-👉 [https://adhxtry.github.io/nifty-network-analysis/](https://adhxtry.github.io/nifty-network-analysis/)
-
-### Setting Up GitHub Pages
-
-To enable GitHub Pages for your fork:
-
-1. Go to your repository on GitHub
-2. Click **Settings** → **Pages**
-3. Under **Source**, select **GitHub Actions**
-4. The documentation will be automatically deployed on the next push
-
-## API Reference
-
-### Data Module (`niftynet.data`)
-
-- `fetch_stock_data()` - Fetch historical stock prices
-- `save_to_csv()` - Save DataFrame to CSV
-- `load_from_csv()` - Load data from CSV
-- `fetch_and_save()` - Fetch and save in one operation
-
-### Graph Module (`niftynet.graph`)
-
-- `compute_correlation_matrix()` - Calculate correlation matrix
-- `build_correlation_graph()` - Create graph from correlations
-- `filter_graph()` - Remove low-degree nodes
-- `get_graph_summary()` - Get graph statistics
-
-### Metrics Module (`niftynet.metrics`)
-
-- `compute_degree_centrality()` - Node degree centrality
-- `compute_betweenness_centrality()` - Betweenness centrality
-- `compute_closeness_centrality()` - Closeness centrality
-- `compute_eigenvector_centrality()` - Eigenvector centrality
-- `compute_pagerank()` - PageRank scores
-- `compute_all_centralities()` - All metrics in one DataFrame
-
-### Visuals Module (`niftynet.visuals`)
-
-- `create_network_plot()` - Interactive network visualization
-- `create_correlation_heatmap()` - Correlation matrix heatmap
-- `create_centrality_bar_chart()` - Bar chart for rankings
-- `create_degree_distribution()` - Degree distribution histogram
-
-## Examples
-
-### Example 1: Analyze Top 10 Nifty Stocks
-
-```python
-from niftynet import data, graph, metrics
-
-# Fetch data for top stocks
-tickers = [f'{stock}.NS' for stock in ['RELIANCE', 'TCS', 'HDFCBANK',
-                                         'INFY', 'ICICIBANK', 'HINDUNILVR',
-                                         'ITC', 'SBIN', 'BHARTIARTL', 'KOTAKBANK']]
-prices = data.fetch_stock_data(tickers, '2023-01-01', '2024-01-01')
-
-# Build and analyze network
-G, _ = graph.build_graph_from_prices(prices, threshold=0.6)
-centralities = metrics.compute_all_centralities(G)
-
-# Show most central stocks
-print("Top 5 by Degree Centrality:")
-print(centralities.nlargest(5, 'degree')[['degree']])
-```
-
-### Example 2: Custom Visualization
-
-```python
-from niftynet import data, graph, visuals, metrics
-
-# Fetch and build graph
-prices = data.fetch_stock_data(['RELIANCE.NS', 'TCS.NS', 'INFY.NS'],
-                               '2023-01-01', '2024-01-01')
-G, corr = graph.build_graph_from_prices(prices, threshold=0.5)
-
-# Color nodes by degree centrality
-degree_cent = metrics.compute_degree_centrality(G)
-
-# Create custom visualization
-fig = visuals.create_network_plot(
-    G,
-    node_colors=degree_cent,
-    node_size_metric=degree_cent,
-    layout='kamada_kawai',
-    title='Stock Network - Colored by Degree Centrality'
-)
-fig.show()
-```
-
-## Nifty 500 Index Data
-
-Download the Nifty 500 index data:
-
-```bash
-# Windows (PowerShell)
-Invoke-WebRequest -Uri https://www.niftyindices.com/IndexConstituent/ind_nifty500list.csv -OutFile res/index_nifty500.csv
-
-# Linux / macOS
-wget -O res/index_nifty500.csv https://www.niftyindices.com/IndexConstituent/ind_nifty500list.csv
-```
+Stock price data is fetched automatically using yfinance and cached locally in `~/.niftynet/data/` for faster subsequent runs.
 
 ## Contributing
 
@@ -261,19 +206,21 @@ This project is open source and available under the MIT License.
 ## Acknowledgments
 
 - Stock data provided by [Yahoo Finance](https://finance.yahoo.com/) via yfinance
+- NSE index data from [NSE India](https://www.nseindia.com/)
 - Network analysis powered by [NetworkX](https://networkx.org/)
 - Visualizations created with [Plotly](https://plotly.com/)
 - Web interface built with [Dash](https://dash.plotly.com/)
-
-## References
-
-Reference papers on stock market network analysis are available in the `papers/` directory.
+- Image export using [Kaleido](https://github.com/plotly/Kaleido)
 
 ## Contact
 
 **Author**: Adheeesh Trivedi
 **GitHub**: [@adhxtry](https://github.com/adhxtry)
 **Repository**: [nifty-network-analysis](https://github.com/adhxtry/nifty-network-analysis)
+
+## References
+
+Reference papers on stock market network analysis are available in the `papers/` directory.
 
 [1] Chi, K. Tse, Jing Liu, and Francis CM Lau. "A network perspective of the stock market." Journal of
 Empirical Finance 17.4 (2010): 659-667.
