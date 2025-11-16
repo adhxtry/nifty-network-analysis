@@ -786,6 +786,7 @@ source = { editable = "." }
 dependencies = [
     { name = "dash" },
     { name = "dash-bootstrap-components" },
+    { name = "kaleido" },
     { name = "networkx" },
     { name = "numpy" },
     { name = "pandas" },
@@ -804,7 +805,6 @@ dev = [
 ]
 notebook = [
     { name = "ipykernel" },
-    { name = "kaleido" },
     { name = "nbformat" },
 ]
 
@@ -813,7 +813,7 @@ requires-dist = [
     { name = "dash", specifier = ">=2.18.0" },
     { name = "dash-bootstrap-components", specifier = ">=1.6.0" },
     { name = "ipykernel", marker = "extra == 'notebook'", specifier = ">=7.1.0" },
-    { name = "kaleido", marker = "extra == 'notebook'", specifier = ">=1.2.0" },
+    { name = "kaleido", specifier = ">=1.2.0" },
     { name = "nbformat", marker = "extra == 'notebook'", specifier = ">=5.10.4" },
     { name = "networkx", specifier = ">=3.5" },
     { name = "numpy", specifier = ">=1.26.0" },
