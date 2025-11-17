@@ -178,6 +178,7 @@ def _create_edge_trace(edge_x: list, edge_y: list) -> go.Scatter:
         x=edge_x,
         y=edge_y,
         line=dict(width=0.2, color="#888"),
+        opacity=0.5,
         hoverinfo="none",
         mode="lines",
         name='Edges'
