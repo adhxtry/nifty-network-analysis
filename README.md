@@ -20,7 +20,6 @@ For the more detailed usage, refer to the [Prototype Notebook](./prototype.ipynb
 - **Interactive Visualizations**: Create beautiful plots with Plotly
 - **Web Application**: Full-featured Dash web interface for network analysis
 - **Download Results**: Export all plots (PNG) and analysis reports (TXT) as ZIP files
-- **Documentation**: Complete API documentation with Sphinx
 
 ## Project Structure
 
@@ -36,7 +35,6 @@ nifty-network-analysis/
 │   ├── config.py         # Configuration settings
 │   ├── requirements.txt  # Web app dependencies
 │   └── README.md         # Web app documentation
-├── tests/                 # Unit tests
 ├── docs/                  # Sphinx documentation (TODO)
 └── pyproject.toml        # Project configuration
 ```
@@ -46,7 +44,7 @@ nifty-network-analysis/
 ### Prerequisites
 
 - Python 3.12 or higher
-- [uv](https://docs.astral.sh/uv/) (recommended) or pip
+- [uv](https://docs.astral.sh/uv/) or pip
 
 ### Using uv (Recommended)
 
@@ -214,9 +212,8 @@ This project is open source and available under the MIT License.
 
 ## Contact
 
-**Author**: Adheeesh Trivedi
-**GitHub**: [@adhxtry](https://github.com/adhxtry)
-**Repository**: [nifty-network-analysis](https://github.com/adhxtry/nifty-network-analysis)
+**Author:**
+Adheeesh Trivedi ( [@adhxtry](https://github.com/adhxtry) )
 
 ## References
 
